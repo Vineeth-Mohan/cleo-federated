@@ -117,6 +117,22 @@ public enum ElementDAO implements RestDAO<ElementDTO> {
             return null;
         }
     }
+    public int getLargest() {
+        ArrayStoreElement<ElementDTO> store = getElementStore();
+        int largest=0;
+        int start = store.getIndexStart();
+        int end = start + store.length();
+        for(int i = start; i < end; i++) {
+            ElementDTO element = getElementStore().getElement(i);
+            if(element != null && element.isSearchable()) {
+                if(largest < i){
+                        largest=i;
+                }
+            }
+        }
+        return largest;
+    }
+
     
     @Override // HTTP-POST
     public boolean insertElement(ElementDTO element) throws Exception {

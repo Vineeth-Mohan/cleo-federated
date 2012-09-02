@@ -22,6 +22,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import cleo.primer.ElementDAO;
 import cleo.search.Element;
 
 /**
@@ -75,9 +76,20 @@ public class ElementDTO implements Element, Cloneable {
      * Element creation timestamp. 
      */
     private long timestamp = System.currentTimeMillis();
+    private static Boolean flag = false;
+    private static int currentID = 0;
+
+    public ElementDTO(){
+        if(!flag){
+        		currentID = ElementDAO.INSTANCE.getLargest();
+        		flag=true;
+        }
+        currentID++;
+        this.id=currentID;
+    }
+
     
     public void setId(int id) {
-        this.id = id;
     }
     
     public int getId() {
