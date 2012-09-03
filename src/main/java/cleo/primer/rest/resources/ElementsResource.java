@@ -148,17 +148,19 @@ public class ElementsResource {
     @GET
     @Path("/search")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-    public ElementListDTO search(@QueryParam("uid")int uid,
-                                 @QueryParam("query")String query) {
-        if(query == null) {
-            return new ElementListDTO();
+    public Response search(@QueryParam("uid")int uid,
+                                 @QueryParam("query")String query ,
+                                 @QueryParam("term")String term) {
+        if(query == null && term !=null){
+        	query=term;
         }
-        
+        if(query == null) {
+            return Response.ok(new ElementListDTO()).build();
+        }
         String[] terms = query.replaceAll("\\W+", " ").toLowerCase().split(" ");
         Collector<ElementDTO> collector = new SortedCollector<ElementDTO>(10, 100);
         collector = ElementDAO.INSTANCE.getSearcher().search(uid, terms, collector);
-        
-        return new ElementListDTO(collector.elements());
+        return Response.ok(new ElementListDTO(collector.elements())).header("Access-Control-Allow-Origin", "*").build();
     }
     
     @POST
