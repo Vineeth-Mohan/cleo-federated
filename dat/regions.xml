@@ -1,0 +1,43 @@
+<element-list>
+	<element>
+		<id>300001</id>
+		<name>Africa</name>
+		<title>Region</title>
+		<term>google</term>
+	</element>
+	<element>
+		<id>300002</id>
+		<name>Middle East</name>
+		<title>Region</title>
+		<term>google</term>
+		<term>east</term>
+	</element>
+	<element>
+		<id>300003</id>
+		<name>Asia Pacific</name>
+		<title>Region</title>
+		<term>asia</term>
+		<term>pacific</term>
+	</element>
+	<element>
+		<id>300004</id>
+		<name>North Americas</name>
+		<title>Region</title>
+		<term>north</term>
+		<term>americas</term>
+	</element>
+	<element>
+		<id>300005</id>
+		<name>Latin Americas</name>
+		<title>Region</title>
+		<term>latin</term>
+		<term>americas</term>
+	</element>
+	<element>
+		<id>300006</id>
+		<name>East Europe</name>
+		<title>Region</title>
+		<term>east</term>
+		<term>europe</term>
+	</element>
+</element-list>
