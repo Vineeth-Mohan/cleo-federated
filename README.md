@@ -1,4 +1,4 @@
-#cleo-federated
+#Cleo-federated
 
 cleo-federated is a clone of cleo-primer with folowing features
 
@@ -17,7 +17,7 @@ MAVEN_OPTS="-Xms2g -Xmx2g" mvn jetty:run
 
 Run the following to populate data of congress and company group
 
-./scripts/post-element-list.sh congress dat/us-congress-representative-list.xml
+./scripts/post-element-list.sh congress dat/us-congress-representative-list.xml <br/>
 ./scripts/post-element-list.sh company dat/nasdaq-company-list.xml
 
 Visit following link to see the auto complete feature in action
