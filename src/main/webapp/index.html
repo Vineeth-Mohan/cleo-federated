@@ -4,19 +4,22 @@
 
     <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.9.0/build/fonts/fonts-min.css" /> 
     <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.9.0/build/autocomplete/assets/skins/sam/autocomplete.css" /> 
+    <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.9.0/themes/base/jquery-ui.css" /> 
     <script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/yahoo-dom-event/yahoo-dom-event.js"></script> 
     <script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/animation/animation-min.js"></script> 
     <script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/connection/connection-min.js"></script> 
     <script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/json/json-min.js"></script> 
     <script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/datasource/datasource-min.js"></script> 
     <script type="text/javascript" src="http://yui.yahooapis.com/2.9.0/build/autocomplete/autocomplete-min.js"></script> 
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script> 
+    <script type="text/javascript" src="http://code.jquery.com/ui/1.9.0/jquery-ui.js"></script> 
 
     <style>
     body {
         background: none repeat scroll 0 0 #EEEEEE;
         font-family: sans-serif;
     }
-    
+  .ui-autocomplete-category{padding:5px; font-size:14px; font-family:Tahoma; font-weight:700; background-color:#006DCC; color:#ffffff; }  
     .page {
         background: none repeat scroll 0 0 white;
         border: 4px solid #CCCCCC;
@@ -147,67 +150,125 @@
       <input id="memberId" type="hidden" value="1">
       <div id="searchForm"> 
         <div id="cleoAutoComplete"> 
-          <input id="cleoInput" type="text"> 
+          <input id="srchBox" type="text"> 
           <div id="cleoContainer"></div> 
         </div> 
       </div>
     </div>
 
-    <script type="text/javascript"> 
-    YAHOO.example.BasicRemote = function() {
-        // Instantiate the XHRDataSource
-        var dataSourceURL = "http://" + window.location.hostname + ":" + window.location.port + "/cleo-primer/rest/elements/search?";
-        var dataSource = new YAHOO.util.XHRDataSource(dataSourceURL);
+    <script type="text/javascript">
+					$.widget("custom.catcomplete",
+					$.ui.autocomplete, {
+					   _renderMenu: function (ul, items) {
+					      var self = this,categories = {};
+					      $.each(
+					      items,
 
-        dataSource.connMgr = YAHOO.util.Connect;
-        dataSource.connMgr.initHeader('Accept', "application/json", true);
+					      function (index,
+					      item) {
+					         // if (index <
+					         // 4) Limits the
+					         // number of
+					         // results shown
+					         // by auto
+					         // complete
 
-        dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_JSON;
-        dataSource.responseSchema = {
-          resultsList: "element",
-          fields: ["id", "name", "title", "url", "score"]  
-        };
+					         if (!categories.hasOwnProperty(item.category)) {
+					            categories[item.category] = [item];
+					         } else {
+					            categories[item.category] = categories[item.category].concat([item]);
+					         }
+					      });
 
-        // Instantiate the AutoComplete
-        var autoComplete = new YAHOO.widget.AutoComplete("cleoInput", "cleoContainer", dataSource); 
-        autoComplete.queryMatchContains = true; 
-        autoComplete.queryQuestionMark = true; 
-        autoComplete.useShadow = true; 
-        autoComplete.animVert = false;
-        autoComplete.minQueryLength = 1;
-        autoComplete.queryDelay = 0.00001;
-        autoComplete.suppressInputUpdate = true;
-        autoComplete.allowBrowserAutocomplete = false;
+					      /*
+					       * Iterate over the hash we just
+					       * built and display a category
+					       * followed by its items.
+					       */
+					      $.each(
+					      categories,
 
-        autoComplete.generateRequest = function(sQuery)
-        {
-          return "uid=" + document.getElementById("memberId").value + "&query=" + sQuery;
-        }
+					      function (category,
+					      items) {
+					         if (category) {
+					            ul.append("<li class='ui-autocomplete-category'>" + category + "</li>");
+					         }
+					         $.each(
+					         items,
 
-        autoComplete.formatResult = function (oResultData, sQuery, sResultMatch) {
-          var id = oResultData[0];
-          var name = oResultData[1];
-          var title = oResultData[2];
-          var webUrl = oResultData[3] == undefined ? "" : oResultData[3];
-          var score = oResultData[4] == undefined ? 0 : oResultData[4];
-          
-          var markup = ["<p class='item-mainline'>", name, "</p>",
-                        "<p class='item-subline'>", title, "</p>"];
-          
-          return (markup.join(""));
-      };
+					         function (
+					         index,
+					         item) {
+					            // if
+					            // (index
+					            // < 2)
+					            // Limits
+					            // the
+					            // number
+					            // of
+					            // results
+					            // shown
+					            // under
+					            // each
+					            // category
+					            // to a
+					            // fixed
+					            // one.
+					            self._renderItem(
+					            ul,
+					            item);
+					         });
+					      });
+					   }
+					});
 
-      autoComplete.itemSelectEvent.subscribe(function(type, args) {
-        if(args[2][1] != undefined) document.getElementById("cleoInput").value = args[2][1];
-        var url = args[2][3] == undefined ? "" : args[2][3];
-        if(url != "") window.open(url);
-      });
+					$("#srchBox")
+					   .catcomplete({
+					   source: function (request, response) {
+					      $.ajax({
+					         url: '/cleo-primer/rest/elements/search?',
+					         data: request,
+					         dataType: "json",
+					         type: "get",
+					         data: {
+					            term: $("#srchBox").val()
+					         },
+					         success: function (data) {
+					            var terms = [];
+					            var currentCategory = "";
+					            if (data != null) {
+							for(var group in data){
+							for (var k = 0; k < data[group].length; k++) {
+								var item = {
+									label: data[group][k].name,
+									category: group.toUpperCase()
+									};
+								terms.push(item);
+							}
+							}
+							console.log(terms);
+							response(terms);
+					            }
+					         }
 
-      return {
-          oDS: dataSource,
-          oAC: autoComplete
-        };
-      }();
+					      });
+					   },
+					   dataType: 'jsonp',
+					   open: function (event, ui) {
+					      facetSearchFlag = true;
+					      $(".ui-slider-handle ui-state-default ui-corner-all")
+					         .hide();
+					      $(".ui-autocomplete.ui-menu")
+					         .width(400);
+					      $(".ui-autocomplete.ui-menu").css('z-index', 1000);
+					   },
+					   close: function (event, ui) {
+					      $(".ui-slider-handle ui-state-default ui-corner-all")
+					         .show();
+					   },
+					   select: function (event, ui) {
+					   }
+					}); 
     </script> 
   </body>
 </html>
