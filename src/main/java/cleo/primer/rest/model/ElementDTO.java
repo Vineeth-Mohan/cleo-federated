@@ -22,7 +22,9 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
-import cleo.primer.ElementDAO;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+
 import cleo.search.Element;
 
 /**
@@ -76,20 +78,9 @@ public class ElementDTO implements Element, Cloneable {
      * Element creation timestamp. 
      */
     private long timestamp = System.currentTimeMillis();
-    private static Boolean flag = false;
-    private static int currentID = 0;
-
-    public ElementDTO(){
-        if(!flag){
-        		currentID = ElementDAO.INSTANCE.getLargest();
-        		flag=true;
-        }
-        currentID++;
-        this.id=currentID;
-    }
-
     
     public void setId(int id) {
+        this.id = id;
     }
     
     public int getId() {
@@ -209,6 +200,12 @@ public class ElementDTO implements Element, Cloneable {
       } else {
           return false;
       }
+    }
+    
+    public JSONObject getJson() throws JSONException{
+    	JSONObject obj = new JSONObject();
+    	obj.put("name", this.getName());
+    	return obj;
     }
     
     @Override

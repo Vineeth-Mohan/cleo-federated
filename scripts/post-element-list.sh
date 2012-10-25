@@ -7,8 +7,6 @@ if [ $# -eq 0 ]; then
     echo "  $0 dat/nasdaq-company-list.xml"
     exit 1;
 fi
-
-for f in $@; do
-    curl -v -X POST -H "Content-type: application/xml" -H "Accept: application/xml" http://localhost:8080/cleo-primer/rest/elements/ --data-binary @$f
-done
+echo $1
+    curl -v -X POST -H "Content-type: application/xml" -H "Accept: application/xml" http://localhost:8080/cleo-primer/rest/elements/$1 --data-binary @$2
 

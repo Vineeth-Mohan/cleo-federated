@@ -17,8 +17,10 @@
 package cleo.primer;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import cleo.primer.rest.model.ElementDTO;
 import cleo.search.Indexer;
@@ -34,18 +36,22 @@ import cleo.search.typeahead.Typeahead;
 public enum ElementDAO implements RestDAO<ElementDTO> {
     INSTANCE;
     
-    private TypeaheadInstance<ElementDTO> loader;
+    private GenericTypeaheadInstance<ElementDTO> loader;
     
     private ElementDAO () {
         try {
-            String name = System.getProperty("cleo.instance.name");
-            String type = System.getProperty("cleo.instance.type");
-            String conf = System.getProperty("cleo.instance.conf");
-            File confPath = new File(conf);
-            
-            @SuppressWarnings("unchecked")
-            Class<TypeaheadInstance<ElementDTO>> instanceClass = (Class<TypeaheadInstance<ElementDTO>>)Class.forName(type);
-            loader = instanceClass.getConstructor(String.class, File.class).newInstance(name, confPath);
+        	Properties prop = new Properties();
+        	prop.load(new FileInputStream("config/cleo.properties"));
+            String defaultGroupName = prop.getProperty("defaultGroupName");
+            String templateConfig = prop.getProperty("templateConfig");
+            String dataDirectory = prop.getProperty("dataDirectory");
+            System.out.println("Config are " + defaultGroupName + " , " + templateConfig + " , " + dataDirectory);
+            File confFile = new File(templateConfig);
+            File basePath = new File(dataDirectory);
+            if(!basePath.exists()){
+            	basePath.mkdirs();
+            }
+            loader = new GenericTypeaheadInstance<ElementDTO>(defaultGroupName,confFile,basePath,new GroupNamePersistance(dataDirectory));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -117,30 +123,14 @@ public enum ElementDAO implements RestDAO<ElementDTO> {
             return null;
         }
     }
-    public int getLargest() {
-        ArrayStoreElement<ElementDTO> store = getElementStore();
-        int largest=0;
-        int start = store.getIndexStart();
-        int end = start + store.length();
-        for(int i = start; i < end; i++) {
-            ElementDTO element = getElementStore().getElement(i);
-            if(element != null && element.isSearchable()) {
-                if(largest < i){
-                        largest=i;
-                }
-            }
-        }
-        return largest;
+    
+    public boolean insertElement(ElementDTO element) throws Exception {
+        return loader.index(element);
     }
-
     
     @Override // HTTP-POST
-    public boolean insertElement(ElementDTO element) throws Exception {
-        int elementId = element.getElementId();
-        if(getElementStore().hasIndex(elementId)) {
-            return getIndexer().index(element);
-        }
-        
-        return false;
+    public boolean insertElementOfType(String name , ElementDTO element) throws Exception {
+        return loader.index(element,name);
     }
+
 }

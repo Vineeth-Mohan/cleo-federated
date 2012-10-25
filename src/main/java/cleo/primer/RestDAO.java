@@ -34,5 +34,6 @@ public interface RestDAO<T> {
     public T updateElement(T element) throws Exception;
     
     // HTTP-POST
-    public boolean insertElement(T element) throws Exception;
+    public boolean insertElementOfType(String name , T element) throws Exception;
+
 }

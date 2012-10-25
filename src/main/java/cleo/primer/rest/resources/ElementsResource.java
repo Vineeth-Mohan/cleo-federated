@@ -36,7 +36,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.Status;
 
-import org.springframework.context.annotation.Scope;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.springframework.stereotype.Component;
 
 import cleo.primer.ElementDAO;
@@ -44,10 +46,10 @@ import cleo.primer.rest.model.ElementDTO;
 import cleo.primer.rest.model.ElementListDTO;
 import cleo.primer.rest.model.ExceptionDTO;
 import cleo.search.collector.Collector;
+import cleo.search.collector.MultiSourceCollector;
 import cleo.search.collector.SortedCollector;
 
 @Component
-@Scope("request")
 @Path("/elements")
 public class ElementsResource {
     // Allows to insert contextual objects such as 
@@ -82,16 +84,18 @@ public class ElementsResource {
     }
     
     @POST
+    @Path("{group}")
     @Consumes({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-    public Response addElements(ElementListDTO elementListDTO) {
+    public Response addElements(ElementListDTO elementListDTO , @PathParam("group")String group ) {
+    	System.out.println("Adding to group " + group);
         for(ElementDTO elementDTO : elementListDTO.elements) {
             try {
-                ElementDAO.INSTANCE.insertElement(elementDTO);
+                ElementDAO.INSTANCE.insertElementOfType(group ,elementDTO);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        
+        flush();
         return Response.status(Status.OK).build();
     }
     
@@ -147,23 +151,52 @@ public class ElementsResource {
     
     @GET
     @Path("/search")
-    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-    public Response search(@QueryParam("uid")int uid,
-                                 @QueryParam("query")String query ,
-                                 @QueryParam("term")String term) {
-        if(query == null && term !=null){
-        	query=term;
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response search(	@QueryParam("uid")int uid,
+            				@QueryParam("query")String query ,
+            				@QueryParam("term")String term) {        
+    	
+    	if(query == null && term !=null){
+            query=term;
         }
         if(query == null) {
             return Response.ok(new ElementListDTO()).build();
         }
+        
         String[] terms = query.replaceAll("\\W+", " ").toLowerCase().split(" ");
         Collector<ElementDTO> collector = new SortedCollector<ElementDTO>(10, 100);
-        collector = ElementDAO.INSTANCE.getSearcher().search(uid, terms, collector);
-        return Response.ok(new ElementListDTO(collector.elements())).header("Access-Control-Allow-Origin", "*").build();
+        collector = ElementDAO.INSTANCE.
+        		getSearcher().
+        		search(uid, terms, collector);
+        MultiSourceCollector<ElementDTO> multiCollector = (MultiSourceCollector<ElementDTO>) collector;
+        String json = "";
+		try {
+			json = convertToJson(multiCollector);
+			System.out.println("JSON is " + json);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return Response.serverError().build();
+		}
+        return Response.ok(json).header("Access-Control-Allow-Origin", "*").build();
     }
     
-    @POST
+    private String convertToJson(MultiSourceCollector<ElementDTO> multiCollector) throws JSONException {
+    	JSONObject json = new JSONObject();
+    	for(String source : multiCollector.sources()){
+    		Collector<ElementDTO> sourceCollector = multiCollector.getCollector(source);
+    		if(sourceCollector.size() == 0){
+    			continue;
+    		}
+    		JSONArray array = new JSONArray();
+    		for(ElementDTO element : sourceCollector.elements()){
+    			array.put(element.getJson());
+    		}
+    		json.put(source, array);
+    	}
+		return json.toString();
+	}
+
+	@POST
     @Path("/flush")
     @Produces(MediaType.TEXT_HTML)
     public Response flush() {
