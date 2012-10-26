@@ -88,6 +88,7 @@ public class ElementsResource {
     @Consumes({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
     public Response addElements(ElementListDTO elementListDTO , @PathParam("group")String group ) {
     	System.out.println("Adding to group " + group);
+    	System.out.println("Request is " + request);
         for(ElementDTO elementDTO : elementListDTO.elements) {
             try {
                 ElementDAO.INSTANCE.insertElementOfType(group ,elementDTO);
@@ -96,6 +97,7 @@ public class ElementsResource {
             }
         }
         flush();
+        System.out.println("Completed flush");
         return Response.status(Status.OK).build();
     }
     

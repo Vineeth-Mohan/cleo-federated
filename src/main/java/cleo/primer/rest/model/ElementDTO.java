@@ -216,4 +216,8 @@ public class ElementDTO implements Element, Cloneable {
     public boolean isSearchable() {
         return terms != null && terms.length > 0;
     }
+    
+    public String toString(){
+    	return "Name = " + name + " terms " + this.getTerms()[0];
+    }
 }

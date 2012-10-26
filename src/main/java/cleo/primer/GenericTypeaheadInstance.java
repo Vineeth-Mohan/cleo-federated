@@ -21,18 +21,29 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import cleo.primer.rest.model.ElementDTO;
 import cleo.search.Element;
+import cleo.search.ElementJavaSerializer;
+import cleo.search.ElementSerializer;
 import cleo.search.Indexer;
 import cleo.search.MultiIndexer;
+import cleo.search.SimpleElement;
+import cleo.search.SimpleElementSerializer;
 import cleo.search.selector.ScoredElementSelectorFactory;
+import cleo.search.selector.ScoredPrefixSelectorFactory;
+import cleo.search.selector.SelectorFactory;
 import cleo.search.store.ArrayStoreElement;
 import cleo.search.store.MultiArrayStoreElement;
 import cleo.search.tool.GenericTypeaheadInitializer;
+import cleo.search.tool.ScannerTypeaheadInitializer;
 import cleo.search.typeahead.GenericTypeahead;
 import cleo.search.typeahead.GenericTypeaheadConfig;
 import cleo.search.typeahead.MultiTypeahead;
+import cleo.search.typeahead.NetworkTypeaheadConfig;
+import cleo.search.typeahead.ScannerTypeahead;
+import cleo.search.typeahead.ScannerTypeaheadConfig;
 import cleo.search.typeahead.Typeahead;
 import cleo.search.typeahead.TypeaheadConfigFactory;
 
@@ -46,7 +57,7 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
     private Indexer<E> indexer;
     private  Typeahead<E> searcher;
     private ArrayStoreElement<E> elementStore;
-    final Map<String,GenericTypeahead<E>> federatedIndexer;
+    final Map<String,ScannerTypeahead<E>> federatedIndexer;
     final Map<String,Integer> indexLength;
     final String name;
     List<Indexer<E>> indexerList = new ArrayList<Indexer<E>>();
@@ -60,7 +71,7 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
         this.name = defaultGroupName;
         this.templateConfig = templateConfig;
         this.dataFolder = dataFolder;
-        federatedIndexer = new HashMap<String,GenericTypeahead<E>>();
+        federatedIndexer = new HashMap<String,ScannerTypeahead<E>>();
         indexLength = new HashMap<String,Integer>();
         this.groupNamePersistance = groupNamePersistance;
         initializeConnections(dataFolder,new ArrayList<String>(groupNamePersistance.read().keySet()));
@@ -72,7 +83,7 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
     	if(federatedIndexer.get(name) != null){
     		return;
     	}
-    	GenericTypeahead<E> gta = createTypeahead(templateConfig,name);
+    	ScannerTypeahead<E> gta = createTypeahead(templateConfig,name);
     	federatedIndexer.put(name, gta);
         indexerList.add(gta);
         searcherList.add(gta);
@@ -84,20 +95,31 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
         groupNamePersistance.addGroupName(name);
     }
     
-    protected GenericTypeahead<E> createTypeahead(File configFile , String name) throws Exception {
-        GenericTypeaheadConfig<E> config = TypeaheadConfigFactory.createGenericTypeaheadConfig(configFile);
-        config.setSelectorFactory(new ScoredElementSelectorFactory<E>());
-        
-        config.setName(name);
-        config.setConnectionsStoreDir(appendName(dataFolder,name + "/connections-store"));
-        config.setElementStoreDir(appendName(dataFolder,name + "/element-store"));
-        System.out.println("Config is " + config.getConnectionsStoreDir() + " , " + config.getElementStoreDir());
+    protected ScannerTypeahead<E> createTypeahead(File configFile , String name) throws Exception {
+    	ScannerTypeaheadConfig<E> config = new ScannerTypeaheadConfig<E>();
+    	
+	    config.setName(name);
+	    config.setSelectorFactory(createSelectorFactory());
+	    config.setElementSerializer(createElementSerializer());
+	    config.setElementStoreDir(new File("data/" + name + "/element-store"));
+	    config.setElementStoreIndexStart(0);
+	    config.setElementStoreCapacity(100000);
+	    config.setElementStoreSegmentMB(32);
+	    config.setFilterPrefixLength(2);
+                
         indexLength.put(name, 0);
-        GenericTypeaheadInitializer<E> initializer =new GenericTypeaheadInitializer<E>(config);
-        
-        return (GenericTypeahead<E>)initializer.getTypeahead();
+        ScannerTypeaheadInitializer<E> initializer =new ScannerTypeaheadInitializer<E>(config);
+        return (ScannerTypeahead<E>)initializer.getTypeahead();
     }
     
+	  protected  SelectorFactory<E> createSelectorFactory() {
+		    return new ScoredPrefixSelectorFactory<E>();
+		  }
+
+	  protected  ElementSerializer<E> createElementSerializer() {
+		    return new ElementJavaSerializer<E>();
+		  }
+
     private File appendName(File file , String name){
     	if(file == null){
     		return null;
@@ -107,18 +129,17 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
     	return ret;
     }
     
-    private List<GenericTypeahead<E>> initializeConnections(File dataFolder, List<String> list) throws Exception{
-    	List<GenericTypeahead<E>> connections = new ArrayList<GenericTypeahead<E>>();
+    private List<ScannerTypeahead<E>> initializeConnections(File dataFolder, List<String> list) throws Exception{
+    	List<ScannerTypeahead<E>> connections = new ArrayList<ScannerTypeahead<E>>();
     	System.out.println("List of sources are " + list);
     	for(String groupName : list ){
-    	        GenericTypeahead<E> gta = createTypeahead(templateConfig,groupName);
-    			connections.add(gta);
+    	        ScannerTypeahead<E> gta = createTypeahead(templateConfig,groupName);
+    			//connections.add(gta);
     	        indexerList.add(gta);
     	        searcherList.add(gta);
     	        storeList.add(gta.getElementStore());
     	        indexLength.put(groupName, getLargest(gta.getElementStore()));
     	        federatedIndexer.put(groupName, gta);
-    			System.out.println("Adding new connection " + groupName + "with size " + indexLength.get(groupName));
     	}
 
         indexer = new MultiIndexer<E>(this.name, indexerList);
@@ -144,7 +165,7 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
     }
     
     public final Boolean index(E element , String name) throws Exception {
-    	GenericTypeahead<E> index = federatedIndexer.get(name);
+    	ScannerTypeahead<E> index = federatedIndexer.get(name);
     	if(index == null){
     		createNewGroup(name);
     		index = federatedIndexer.get(name);
@@ -155,9 +176,7 @@ public class GenericTypeaheadInstance<E extends Element> implements TypeaheadIns
     	Integer length = indexLength.get(name);
     	element.setElementId(length + 1);
     	Boolean flag = index.index(element);
-    	if(flag == true){
-    		indexLength.put(name, length + 1);
-    	}
+    	indexLength.put(name, length + 1);
     	return flag;
     }
     

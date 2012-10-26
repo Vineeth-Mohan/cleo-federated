@@ -16,7 +16,7 @@
 
 package cleo.primer.rest.model;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -29,7 +29,7 @@ public class ElementListDTO {
     public List<ElementDTO> elements;
     
     public ElementListDTO() {
-        this.elements = new ArrayList<ElementDTO>();
+        this.elements = new LinkedList<ElementDTO>();
     }
     
     public ElementListDTO(List<ElementDTO> elements) {
